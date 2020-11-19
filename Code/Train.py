@@ -173,8 +173,8 @@ def model_fit(name, direct, model, x_train, x_test, y_train, y_test, bsize, epoc
 
     y_pred = model.predict(x_test)
     
-    y_pred_unscaled = y_pred_unscaled.reshape(y_pred_unscaled.shape[0],y_pred_unscaled.shape[1])
-    y_test_unscaled = y_test_unscaled.reshape(y_test_unscaled.shape[0],y_test_unscaled.shape[1])
+    y_pred = y_pred.reshape(y_pred.shape[0],y_pred.shape[1])
+    y_test = y_test.reshape(y_test.shape[0],y_test.shape[1])
 
     if scale==None:
         y_pred_unscaled = y_pred
