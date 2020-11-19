@@ -172,6 +172,9 @@ def model_fit(name, direct, model, x_train, x_test, y_train, y_test, bsize, epoc
     model.load_weights(filepath)
 
     y_pred = model.predict(x_test)
+    
+    y_pred_unscaled = y_pred_unscaled.reshape(y_pred_unscaled.shape[0],y_pred_unscaled.shape[1])
+    y_test_unscaled = y_test_unscaled.reshape(y_test_unscaled.shape[0],y_test_unscaled.shape[1])
 
     if scale==None:
         y_pred_unscaled = y_pred
@@ -180,8 +183,7 @@ def model_fit(name, direct, model, x_train, x_test, y_train, y_test, bsize, epoc
         y_pred_unscaled = scale.inverse_transform(y_pred)
         y_test_unscaled = scale.inverse_transform(y_test)
         
-    y_pred_unscaled = y_pred_unscaled.reshape(y_pred_unscaled.shape[0],y_pred_unscaled.shape[1])
-    y_test_unscaled = y_test_unscaled.reshape(y_test_unscaled.shape[0],y_test_unscaled.shape[1])
+    
     print(f'The shape of y_pred is {y_pred_unscaled.shape} and the shape of y_test is {y_test_unscaled.shape}')
 
     plots(name,history,y_pred_unscaled[:,5],y_test_unscaled[:,5])
