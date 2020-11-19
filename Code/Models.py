@@ -140,14 +140,14 @@ def build_seq2seq(shape,attent):
         output_train = keras.layers.Input(shape=(shape[4], shape[5]))
 
         ## Encoder Section##
-        encoder_first = keras.layers.LSTM(64, activation='relu', return_sequences=True, return_state=False)(input_train)
+        encoder_first = keras.layers.LSTM(64, return_sequences=True, return_state=False)(input_train)
         encoder_second = keras.layers.LSTM(64, return_sequences=True)(encoder_first)
         encoder_third = keras.layers.LSTM(64, return_sequences=True)(encoder_second)
-        encoder_fourth, encoder_fourth_s1, encoder_fourth_s2 = keras.layers.LSTM(64, activation='relu',return_sequences=True,return_state=True)(encoder_third)
+        encoder_fourth, encoder_fourth_s1, encoder_fourth_s2 = keras.layers.LSTM(64,return_sequences=True,return_state=True)(encoder_third)
 
         ##Decoder Section##
         decoder_first = keras.layers.RepeatVector(output_train.shape[1])(encoder_fourth_s1)
-        decoder_second = keras.layers.LSTM(64, activation='relu', return_state=False, return_sequences=True)(decoder_first, initial_state=[encoder_fourth_s1, encoder_fourth_s2])
+        decoder_second = keras.layers.LSTM(64, return_state=False, return_sequences=True)(decoder_first, initial_state=[encoder_fourth_s1, encoder_fourth_s2])
 
         attention = keras.layers.dot([decoder_second, encoder_fourth], axes=[2, 2])
         attention = keras.layers.Activation('softmax')(attention)
@@ -160,7 +160,7 @@ def build_seq2seq(shape,attent):
         decoder_sixth = keras.layers.LSTM(64, return_sequences=True)(decoder_fifth)
 
         ##Output Section##
-        output = keras.layers.TimeDistributed(keras.layers.Dense(output_train.shape[2], activation='relu'))(decoder_sixth)
+        output = keras.layers.TimeDistributed(keras.layers.Dense(output_train.shape[2]))(decoder_sixth)
 
         model = keras.Model(inputs=input_train, outputs=output)
         opt = keras.optimizers.Adam(learning_rate=0.0001)
