@@ -74,7 +74,8 @@ def plots(name,history,y_pred,y_test):
     plt.figure(figsize=(14, 9))
     plt.plot(y_test.reshape(-1, 1), color="red", label='Actual')
     plt.plot(y_pred.reshape(-1, 1), color='blue', label='Predicted')
-    plt.ylabel('Concentration')
+    plt.ylabel('Temperature')
+    plt.xlabel('Time')
     plt.title(f'{name} Actual vs Predicted')
     plt.legend()
     plt.savefig(f'{name} Actual vs Predicted.png')
@@ -84,11 +85,11 @@ def plots(name,history,y_pred,y_test):
 
 def metric(y_test,y_pred):
     i=0
-    e_mae = mae(y_test[:, i].reshape(-1, 1),y_pred[:, i].reshape(-1, 1))
+    e_mae = mae(y_test,y_pred)
 
-    e_mse = mse(y_test[:, i].reshape(-1, 1),y_pred[:, i].reshape(-1, 1))
+    e_mse = mse(y_test,y_pred)
 
-    e_r2 = r2_score(y_test[:, i].reshape(-1, 1),y_pred[:, i].reshape(-1, 1))
+    e_r2 = r2_score(y_test,y_pred)
 
     e_agg = ((np.sqrt(e_mse) + e_mae) / 2) * (1 - e_r2)
 
@@ -105,20 +106,20 @@ def cleaner(direct,name):
 
     df_all = pd.concat([df_simple,df_att],axis=0)
     display(df_all)
-    df_all.columns = ['Attention','MAE','MSE','RMSE','R2','AGG','NMSE','NRMSE','Time Taken','Range']
+    df_all.columns = ['Attention','MAE','MSE','RMSE','R2','AGG','Time Taken','Hours Ahead']
 
     df_all.to_excel('Forecasting Results.xls')
 
-    pred_simple = pd.read_excel(name[0]+' Results.xls',sheet_name='Predictions')
-    pred_att = pd.read_excel(name[1]+' Results.xls',sheet_name='Predictions')
+    # pred_simple = pd.read_excel(name[0]+' Results.xls',sheet_name='Predictions')
+    # pred_att = pd.read_excel(name[1]+' Results.xls',sheet_name='Predictions')
 
 
-    pred_all = pd.concat([pred_simple,pred_att],axis=1)
-    pred_all.drop(columns=['Actual'],inplace=True)
-    pred_all.drop(pred_all.columns[pred_all.columns.str.contains('unnamed',case = False)],axis = 1, inplace = True)
-    pred_all=pd.concat([pred_all,pred_simple[['Actual']]],axis=1)
+    # pred_all = pd.concat([pred_simple,pred_att],axis=1)
+    # pred_all.drop(columns=['Actual'],inplace=True)
+    # pred_all.drop(pred_all.columns[pred_all.columns.str.contains('unnamed',case = False)],axis = 1, inplace = True)
+    # pred_all=pd.concat([pred_all,pred_simple[['Actual']]],axis=1)
 
-    pred_all.to_excel('Forecasting Values.xls')
+    # pred_all.to_excel('Forecasting Values.xls')
 
     os.remove(name[0]+' Results.xls')
     os.remove(name[1]+' Results.xls')
@@ -129,7 +130,7 @@ def cleaner(direct,name):
 
     return
 
-def model_fit(name, df, direct, model, x_train, x_test, y_train, y_test, bsize, epoch, desired,scale=None,atten=False):
+def model_fit(name, direct, model, x_train, x_test, y_train, y_test, bsize, epoch,scale=None,atten=False):
     os.environ['PYTHONHASHSEED'] = '42'
     np.random.seed(42)
     # tf.random.set_seed(seed=42)
@@ -162,12 +163,8 @@ def model_fit(name, df, direct, model, x_train, x_test, y_train, y_test, bsize, 
 
     print('X',x)
 
-
-    maxi = df[desired].max()
-    mini = df[desired].min()
-
     start_time = time.time()
-    history = model.fit(x_train, y_train, batch_size=bsize, epochs=epoch, validation_split=0.2, callbacks=[checkpoint])
+    history = model.fit(x_train, y_train, batch_size=bsize, epochs=epoch, validation_split=0.1, callbacks=[checkpoint])
     end_time = time.time()
 
     duration = round((end_time - start_time) / 60, 2)
@@ -180,49 +177,47 @@ def model_fit(name, df, direct, model, x_train, x_test, y_train, y_test, bsize, 
         y_pred_unscaled = y_pred
         y_test_unscaled = y_test
     else:
-        y_pred_unscaled = scale.inverse_transform(y_pred[:, 0].reshape(-1, 1))
-        y_test_unscaled = scale.inverse_transform(y_test[:, 0].reshape(-1, 1))
+        y_pred_unscaled = scale.inverse_transform(y_pred)
+        y_test_unscaled = scale.inverse_transform(y_test)
+        
+    print(f'The shape of y_pred is {y_pred.shape} and the shape of y_test is {y_test.shape}')
 
-    plots(name,history,y_pred_unscaled,y_test_unscaled)
+    plots(name,history,y_pred_unscaled[:,5],y_test_unscaled[:,5])
 
-    e_mae,e_mse,e_r2,e_agg = metric(y_test_unscaled,y_pred_unscaled)
 
     pt = PrettyTable()
 
-    pt.field_names = ['Hours Ahead', 'R2 Score', 'MAE', 'NMSE', 'NRMSE', 'AGM']
+    pt.field_names = ['Hours Ahead', 'R2 Score', 'MAE', 'MSE', 'RMSE', 'AGM']
 
-    i = 0
+    for i in range(6):
+        e_mae,e_mse,e_r2,e_agg = metric(y_test_unscaled[:,i],y_pred_unscaled[:,i])
+        # i = 0
+        x.write(0, 0, 'Attention')
+        x.write(0, 1, 'MAE')
+        x.write(0, 2, 'MSE')
+        x.write(0, 3, 'RMSE')
+        x.write(0, 4, 'R2')
+        x.write(0, 5, 'Agg')
+        x.write(0, 6, 'Time Taken')
+        x.write(0,7,'Hours Ahead')
+        x.write(i + 1, 0, atten)
+        x.write(i + 1, 1, e_mae)
+        x.write(i + 1, 2, e_mse)
+        x.write(i + 1, 3, sqrt(e_mse))
+        x.write(i + 1, 4, e_r2)
+        x.write(i + 1, 5, e_agg)
+        x.write(i + 1, 6, duration)
+        x.write(i+1,7,i+1)
 
-    x.write(0, 0, 'Attention')
-    x.write(0, 1, 'MAE')
-    x.write(0, 2, 'MSE')
-    x.write(0, 3, 'RMSE')
-    x.write(0, 4, 'R2')
-    x.write(0, 5, 'Agg')
-    x.write(0, 6, 'NMSE')
-    x.write(0, 7, 'NRMSE')
-    x.write(0, 8, 'Time Taken')
-    x.write(0, 9, 'Range')
-    x.write(i + 1, 0, atten)
-    x.write(i + 1, 1, e_mae)
-    x.write(i + 1, 2, e_mse)
-    x.write(i + 1, 3, sqrt(e_mse))
-    x.write(i + 1, 4, e_r2)
-    x.write(i + 1, 5, e_agg)
-    x.write(i + 1, 6, (e_mse) / (maxi - mini))
-    x.write(i + 1, 7, (sqrt(e_mse)) / (maxi - mini))
-    x.write(i + 1, 8, duration)
-    x.write(i + 1, 9, (maxi - mini))
+        pt.add_row([i + 1, round(e_r2, 2), round(e_mae, 2), round((e_mse) , 2),round((sqrt(e_mse)), 2), round(e_agg, 2)])
 
+    # sheet3.write(0, col, name)
+    # sheet3.write(0, 2, 'Actual')
+    # for row, pred in enumerate(y_pred_unscaled):
+    #     sheet3.write(row + 1, col, pred.item())
+    #     sheet3.write(row + 1, 2, y_test_unscaled[row].item())
 
-    sheet3.write(0, col, name)
-    sheet3.write(0, 2, 'Actual')
-    for row, pred in enumerate(y_pred_unscaled):
-        sheet3.write(row + 1, col, pred.item())
-        sheet3.write(row + 1, 2, y_test_unscaled[row].item())
-
-    pt.add_row([i + 1, round(e_r2, 2), round(e_mae, 2), round((e_mse) / (maxi - mini), 2),
-                round((sqrt(e_mse)) / (maxi - mini), 2), round(e_agg, 2)])
+    
 
     print(pt)
 
@@ -250,7 +245,7 @@ def model_save(direct, models, names):
     return
 
 
-def build_model(name,dataframe,output,scaler,x_train,x_test,y_train,y_test,batch_size,epochs):
+def build_model(name,scaler,x_train,x_test,y_train,y_test,batch_size,epochs):
     if name=='LSTM':
         print('You Selected LSTM')
 
@@ -261,7 +256,7 @@ def build_model(name,dataframe,output,scaler,x_train,x_test,y_train,y_test,batch
 
         lstm_simple=build_lstm(x_train.shape,False)
 
-        model_fit(names[0],dataframe,name,lstm_simple,x_train,x_test,y_train,y_test,batch_size,epochs,output,scaler,False)
+        model_fit(names[0],name,lstm_simple,x_train,x_test,y_train,y_test,batch_size,epochs,scaler,False)
 
         # K.clear_session()
 
@@ -271,7 +266,7 @@ def build_model(name,dataframe,output,scaler,x_train,x_test,y_train,y_test,batch
 
         lstm_att = build_lstm(x_train.shape,True)
 
-        model_fit(names[1], dataframe, name, lstm_att, x_train, x_test, y_train, y_test, batch_size, epochs,output, scaler,True)
+        model_fit(names[1], name, lstm_att, x_train, x_test, y_train, y_test, batch_size, epochs, scaler,True)
 
         lstm_models = [lstm_simple, lstm_att]
         cleaner(name,names)
@@ -295,7 +290,7 @@ def build_model(name,dataframe,output,scaler,x_train,x_test,y_train,y_test,batch
 
         convlstm_simple = build_convlstm(x_train_convlstm.shape,False)
 
-        model_fit(names[0], dataframe, name, convlstm_simple, x_train_convlstm, x_test_convlstm, y_train, y_test, batch_size, epochs, output,scaler,False)
+        model_fit(names[0], name, convlstm_simple, x_train_convlstm, x_test_convlstm, y_train, y_test, batch_size, epochs,scaler,False)
 
         # K.clear_session()
 
@@ -305,7 +300,7 @@ def build_model(name,dataframe,output,scaler,x_train,x_test,y_train,y_test,batch
 
         convlstm_att = build_convlstm(x_train_convlstm.shape, True)
 
-        model_fit(names[1], dataframe, name, convlstm_att, x_train_convlstm, x_test_convlstm, y_train, y_test, batch_size, epochs, output,scaler, True)
+        model_fit(names[1], name, convlstm_att, x_train_convlstm, x_test_convlstm, y_train, y_test, batch_size, epochs,scaler, True)
 
         convlstm_models = [convlstm_simple, convlstm_att]
         cleaner(name, names)
@@ -326,7 +321,7 @@ def build_model(name,dataframe,output,scaler,x_train,x_test,y_train,y_test,batch
 
         cnnlstm_simple = build_cnnlstm(x_train.shape, False)
 
-        model_fit(names[0], dataframe, name, cnnlstm_simple, x_train, x_test, y_train, y_test, batch_size, epochs, output,scaler,False)
+        model_fit(names[0], name, cnnlstm_simple, x_train, x_test, y_train, y_test, batch_size, epochs,scaler,False)
         
         # K.clear_session()
         
@@ -336,7 +331,7 @@ def build_model(name,dataframe,output,scaler,x_train,x_test,y_train,y_test,batch
 
         cnnlstm_att = build_cnnlstm(x_train.shape, True)
 
-        model_fit(names[1], dataframe, name, cnnlstm_att, x_train, x_test, y_train, y_test, batch_size, epochs, output,scaler, True)
+        model_fit(names[1], name, cnnlstm_att, x_train, x_test, y_train, y_test, batch_size, epochs,scaler, True)
 
         cnnlstm_models = [cnnlstm_simple, cnnlstm_att]
         cleaner(name, names)
@@ -370,7 +365,7 @@ def build_model(name,dataframe,output,scaler,x_train,x_test,y_train,y_test,batch
 
         encdec_simple = build_seq2seq(overall_shape,False)
 
-        model_fit(names[0], dataframe, name, encdec_simple, x_train, x_test, y_train_seq, y_test_seq, batch_size, epochs,output,scaler, False)
+        model_fit(names[0], name, encdec_simple, x_train, x_test, y_train_seq, y_test_seq, batch_size, epochs,scaler, False)
         
         # K.clear_session()
         
@@ -380,7 +375,7 @@ def build_model(name,dataframe,output,scaler,x_train,x_test,y_train,y_test,batch
 
         encdec_att = build_seq2seq(overall_shape, True)
 
-        model_fit(names[1], dataframe, name, encdec_att, x_train, x_test, y_train_seq, y_test_seq, batch_size, epochs, output,scaler,True)
+        model_fit(names[1], name, encdec_att, x_train, x_test, y_train_seq, y_test_seq, batch_size, epochs,scaler,True)
 
         seq2seq_models = [encdec_simple, encdec_att]
 
@@ -402,7 +397,7 @@ def build_model(name,dataframe,output,scaler,x_train,x_test,y_train,y_test,batch
 
         wavenet_simple = build_wavenet(x_train.shape, False)
 
-        model_fit(names[0], dataframe, name, wavenet_simple, x_train, x_test, y_train, y_test, batch_size, epochs, output,scaler,False)
+        model_fit(names[0], name, wavenet_simple, x_train, x_test, y_train, y_test, batch_size, epochs,scaler,False)
         
         # K.clear_session()
         
@@ -412,7 +407,7 @@ def build_model(name,dataframe,output,scaler,x_train,x_test,y_train,y_test,batch
 
         wavenet_att = build_wavenet(x_train.shape, True)
 
-        model_fit(names[1], dataframe, name, wavenet_att, x_train, x_test, y_train, y_test, batch_size, epochs, output,scaler, True)
+        model_fit(names[1], name, wavenet_att, x_train, x_test, y_train, y_test, batch_size, epochs,scaler, True)
 
         wavenet_models = [wavenet_simple, wavenet_att]
         cleaner(name, names)

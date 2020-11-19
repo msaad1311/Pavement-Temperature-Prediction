@@ -68,6 +68,7 @@ def build_lstm(shape,attent):
     model = keras.Sequential()
     model.add(keras.layers.LSTM(32, return_sequences=True, input_shape=(shape[1], shape[2])))
     model.add(keras.layers.LSTM(32, return_sequences=True))
+    model.add(keras.layers.Dropout(0.3))
     model.add(keras.layers.LSTM(32, return_sequences=True))
     model.add(keras.layers.LSTM(32, return_sequences=True))
     if attent:
@@ -76,8 +77,9 @@ def build_lstm(shape,attent):
     model.add(keras.layers.Dense(512, activation='relu'))
     model.add(keras.layers.Dense(128, activation='relu'))
     model.add(keras.layers.Dense(64, activation='relu'))
+    model.add(keras.layers.Dropout(0.3))
     model.add(keras.layers.Dense(32))
-    model.add(keras.layers.Dense(1))
+    model.add(keras.layers.Dense(6))
 
     model.compile(loss='mse', optimizer=keras.optimizers.Adam(learning_rate=0.001), metrics=['mae'])
 
@@ -101,7 +103,7 @@ def build_convlstm(shape,attent):
     model.add(keras.layers.Dense(128, activation='relu'))
     model.add(keras.layers.Dense(64, activation='relu'))
     model.add(keras.layers.Dense(32))
-    model.add(keras.layers.Dense(1,activation='relu'))
+    model.add(keras.layers.Dense(6))
 
     model.compile(loss='mse', optimizer=keras.optimizers.Adam(learning_rate=0.0001), metrics=['mae'])
     model.summary()
@@ -122,7 +124,7 @@ def build_cnnlstm(shape,attent):
     model.add(keras.layers.Dense(128, activation='relu'))
     model.add(keras.layers.Dense(64, activation='relu'))
     model.add(keras.layers.Dense(32))
-    model.add(keras.layers.Dense(1))
+    model.add(keras.layers.Dense(6))
 
     model.compile(loss='mse', optimizer=keras.optimizers.Adam(learning_rate=0.0001), metrics=['mae'])
 
@@ -244,7 +246,7 @@ def build_wavenet(shape,attent=False):
     out = keras.layers.Conv1D(1, 1, padding='same')(out)
     
     out = keras.layers.Flatten()(out)
-    out = keras.layers.Dense(1)(out)
+    out = keras.layers.Dense(6)(out)
     
     model = keras.Model(inputs, out)
     

@@ -30,31 +30,12 @@ import tensorflow.keras.backend as K
 
 # region utils
 
-def read_data(filepath, heading_num, row_num, rev_col, need_col, fill_miss=True):
-    need_col =['Date']+need_col
-    file = pd.read_excel(filepath)
-    cols = file.iloc[heading_num]
-    file = file.iloc[row_num:, :].reset_index()
-    file.drop(columns=['index'], inplace=True)
-    file.columns = cols
-    file_temp = file[rev_col]
-    before_fill = file_temp.isnull().sum().sum()
-    if fill_miss:
-        print('Filling up missing values')
-        for col in file_temp.columns:
-            for index, row in file_temp[[col]].iterrows():
-                if pd.isnull(file_temp[col][index]):
-                    file_temp[col][index] = file_temp[col][index - 365]
-            print(f'Completed the {col}')
-        after_fill = file_temp.isnull().sum().sum()
-        print('Missing values filled')
-        print(f'Missing values before: {before_fill} & Missing values after: {after_fill}')
-    file_temp.columns = need_col
-    file_temp[[need_col[1]]] = file_temp[[need_col[1]]].astype('float')
-
-    file_temp.drop(file_temp.columns[0], axis=1,inplace=True)
-
-    return file_temp
+def read_data(source,filename):
+    df_temp = pd.read_excel(os.path.join(source,filename))
+    df_temp = df_temp.loc[:, ~df_temp.columns.str.contains('^Unnamed')]
+    print(f'The shape of the dataframe is {df_temp.shape}')
+    print(df_temp.head())
+    return df_temp
 
 
 def create_dataset(X, y, time_steps, ts_range):
@@ -62,8 +43,8 @@ def create_dataset(X, y, time_steps, ts_range):
     for i in range(len(X) - time_steps - ts_range):
         v = X.iloc[i:(i + time_steps)].values
         Xs.append(v)
-        # ys.append(y.values[(i + time_steps):(i + time_steps + ts_range), 0])
-        ys.append(y.values[(i + time_steps + ts_range-1), 0])
+        ys.append(y.values[(i + time_steps):(i + time_steps + ts_range),0])
+        # ys.append(y.values[(i + time_steps + ts_range-1), 0])
     return np.array(Xs), np.array(ys)
 
 def splitter(df,output,lag,duration,ts,scale=True):
@@ -93,8 +74,7 @@ def splitter(df,output,lag,duration,ts,scale=True):
         x_train,y_train = create_dataset(df_train,df_train[[output]],lag,duration)
         x_test, y_test = create_dataset(df_test, df_test[[output]], lag, duration)
 
-        y_train = y_train.reshape(-1,1)
-        y_test = y_test.reshape(-1,1)
+        # y_train = y_train. pe(-1,1)
 
         return x_train,x_test,y_train,y_test,scaler_single
     else:
