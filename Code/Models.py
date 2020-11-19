@@ -176,21 +176,21 @@ def build_seq2seq(shape,attent):
         output_train = keras.layers.Input(shape=(shape[4], shape[5]))
 
         ## Encoder Section##
-        encoder_first = keras.layers.LSTM(64, activation='relu', return_sequences=True, return_state=False)(input_train)
+        encoder_first = keras.layers.LSTM(64, return_sequences=True, return_state=False)(input_train)
         encoder_second = keras.layers.LSTM(64, return_sequences=True)(encoder_first)
         encoder_third = keras.layers.LSTM(64, return_sequences=True)(encoder_second)
-        encoder_fourth, encoder_fourth_s1, encoder_fourth_s2 = keras.layers.LSTM(64, activation='relu',return_sequences=False, return_state=True)(encoder_third)
+        encoder_fourth, encoder_fourth_s1, encoder_fourth_s2 = keras.layers.LSTM(64,return_sequences=False, return_state=True)(encoder_third)
 
         ##Decorder Section##
         decoder_first = keras.layers.RepeatVector(output_train.shape[1])(encoder_fourth)
-        decoder_second = keras.layers.LSTM(64,activation='relu', return_state=False, return_sequences=True)(decoder_first,initial_state=[encoder_fourth,encoder_fourth_s2])
+        decoder_second = keras.layers.LSTM(64, return_state=False, return_sequences=True)(decoder_first,initial_state=[encoder_fourth,encoder_fourth_s2])
         decoder_third = keras.layers.LSTM(64,return_sequences=True)(decoder_second)
         decoder_fourth = keras.layers.LSTM(64,return_sequences=True)(decoder_third)
         decoder_fifth = keras.layers.LSTM(64,return_sequences=True)(decoder_fourth)
         print(decoder_fifth)
 
         ##Output Section##
-        output = keras.layers.TimeDistributed(keras.layers.Dense(output_train.shape[2], activation='relu'))(decoder_fifth)
+        output = keras.layers.TimeDistributed(keras.layers.Dense(output_train.shape[2]))(decoder_fifth)
 
         model = keras.Model(inputs=input_train, outputs=output)
         opt = keras.optimizers.Adam(learning_rate=0.001)
