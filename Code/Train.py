@@ -173,6 +173,8 @@ def model_fit(name, direct, model, x_train, x_test, y_train, y_test, bsize, epoc
 
     y_pred = model.predict(x_test)
     
+    print(f'The shape of the y_pred is {y_pred.shape} and the shape of y_test is {y_test.shape}')
+    
     y_pred = y_pred.reshape(y_pred.shape[0],y_pred.shape[1])
     y_test = y_test.reshape(y_test.shape[0],y_test.shape[1])
 
