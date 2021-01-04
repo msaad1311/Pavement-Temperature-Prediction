@@ -27,7 +27,7 @@ The following packages are used to carry out the task:
 ## Results
 The results of each combination can be seen in the Results folder in `Dashboard.xlsx`. The file is an interactive file which allows the user to navigate through various variables and getting the desired results. The screenshot below is an illustration of the file. 
 
-![Dashboard](Images/Dashboard.PNG)
+![Dashboard](Images/Dashboard1.PNG)
 
 ## Structure
 The repoistory has the following directory tree.
