@@ -36,17 +36,22 @@ print(f'The shape of x_train is {x_train.shape} and x_test is {x_test.shape}')
 print(f'The shape of y_train is {y_train.shape} and y_test is {y_test.shape}')
 
 ## Creating the prelimaries 
+models = ['lstm1','cnn-lstm1','convlstm1','seq2seq1','wavenet1']
+functs = [m.build_lstm,m.build_cnnlstm,m.build_convlstm,m.build_seq2seq,m.build_wavenet]
+for idx,model in enumerate(models):
+    print(f'doing for {model}')
+    filepath_simple = f'simple_{model}.hdf5'
+    filepath_attention = f'attention_{model}.hdf5'
 
-filepath_simple = 'simple_lstm.hdf5'
-filepath_attention = 'attention_lstm.hdf5'
+    checkpoint_simple = keras.callbacks.ModelCheckpoint(filepath_simple,monitor='val_loss',save_best_only=True)
+    checkpoint_attention = keras.callbacks.ModelCheckpoint(filepath_attention, monitor='val_loss',save_best_only=True)
 
-checkpoint_simple = keras.callbacks.ModelCheckpoint(filepath_simple,monitor='val_loss',save_best_only=True)
-checkpoint_attention = keras.callbacks.ModelCheckpoint(filepath_attention, monitor='val_loss',save_best_only=True)
+    wk=Workbook()
+    sheet1 = wk.add_sheet('Simple', cell_overwrite_ok=True)
+    sheet2 = wk.add_sheet('Attention', cell_overwrite_ok=True)
+    sheet3 = wk.add_sheet('Predictions', cell_overwrite_ok=True)
 
-wk=Workbook()
-sheet1 = wk.add_sheet('Simple', cell_overwrite_ok=True)
-sheet2 = wk.add_sheet('Attention', cell_overwrite_ok=True)
-sheet3 = wk.add_sheet('Predictions', cell_overwrite_ok=True)
-
-simple_lstm = m.build_lstm(x_train,False,False)
-m.model_fit(dest,'LSTM1',simple_lstm,x_train,y_train,x_test,y_test,scaler,checkpoint_simple,filepath_simple,sheet1)
+    architecture = functs[idx](x_train,False,False)
+    m.model_fit(dest,model,architecture,x_train,y_train,x_test,y_test,scaler,checkpoint_simple,filepath_simple,sheet1)
+    wk.save()
+    break
