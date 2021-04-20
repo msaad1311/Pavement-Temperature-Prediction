@@ -87,39 +87,4 @@ def splitter(df,output,lag,duration,ts):
     x_test, y_test = create_dataset(df_test, df_test[[output]], lag, duration)
 
     return x_train,x_test,y_train,y_test,scaler_single
-
-class attention(keras.layers.Layer):
-    '''
-    Attention layer for the neural networks.
-    
-    if return_sequences=True, it will give 3D vector and if false it will give 2D vector. It is same as LSTMs.
-
-    https://stackoverflow.com/questions/62948332/how-to-add-attention-layer-to-a-bi-lstm/62949137#62949137
-    the  following code is being inspired from the above link.
-    '''
-
-    def __init__(self, return_sequences=True, **kwargs):
-        self.return_sequences = return_sequences
-        super(attention, self).__init__()
-
-    def get_config(self):
-        cfg = super().get_config()
-        return cfg
-
-    def build(self, input_shape):
-        self.W = self.add_weight(name="att_weight", shape=(input_shape[-1], 1),
-                                 initializer="normal")
-        self.b = self.add_weight(name="att_bias", shape=(input_shape[1], 1),
-                                 initializer="zeros")
-
-        super(attention, self).build(input_shape)
-
-    def call(self, x):
-        e = K.tanh(K.dot(x, self.W) + self.b)
-        a = K.softmax(e, axis=1)
-        output = x * a
-
-        if self.return_sequences:
-            return output
-
-        return K.sum(output, axis=1)
+ 
