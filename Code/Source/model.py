@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 import matplotlib.pylab as plt
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.metrics import mean_squared_error as mse
@@ -92,9 +93,9 @@ class buildLSTM(BaseEstimator, TransformerMixin):
     @staticmethod
     def checkpointer(atten):
         if atten:
-            filepath = 'attention_lstm.hdf5'
+            filepath = '../Weights/LSTM/attention_lstm.hdf5'
         else:
-            filepath = 'simple_lstm.hdf5'
+            filepath = '../Weights/LSTM/simple_lstm.hdf5'
         checkpoint = keras.callbacks.ModelCheckpoint(
             filepath, monitor='val_loss', save_best_only=True)
         return checkpoint
@@ -132,13 +133,95 @@ class buildLSTM(BaseEstimator, TransformerMixin):
 
         return self.model
 
-#     def predict(self,model,weights,scaler,xtest,ytest):
+    def predict(self,scaler,xtest,ytest):
+        if self.atten:
+            filepath = '../Weights/LSTM/attention_lstm.hdf5'
+        else:
+            filepath = '../Weights/LSTM/simple_lstm.hdf5'
+        print(self.model)
+        self.model.load_weights(filepath)
+        preds = self.model.predict(xtest)
 
-#         self.model.load_weights(weights)
-#         preds = self.model.predict(xtest)
+        ytest_unscaled = scaler.inverse_transform(ytest)
+        preds_unscaled = scaler.inverse_transform(preds)
+        
+        results = []
+        for i in range(ytest.shape[1]):
+            results.append(mse(ytest_unscaled[:,i],preds_unscaled[:,i]))
+        results = pd.DataFrame(results).reset_index()
+        path = '../Results/LSTM/MSE_{self.atten}.xlsx'
+        results.to_excel(path)
+        return self
+    
+    
+class buildCNNLSTM(BaseEstimator, TransformerMixin):
+    def __init__(self, X, atten):
+        self.X = X
+        self.atten = atten
+        self.model = self.buildModel(self.X,self.atten)
+        self.model.compile(loss='mse', optimizer=keras.optimizers.Adam(
+            learning_rate=3e-4), metrics=['mae'])
 
-#         ytest_unscaled = scaler.inverse_transform(ytest)
-#         preds_unscaled = scaler.inverse_transform(preds)
+    @staticmethod
+    def checkpointer(atten):
+        if atten:
+            filepath = '../Weights/CNNLSTM/attention_cnnlstm.hdf5'
+        else:
+            filepath = '../Weights/CNNLSTM/simple_cnnlstm.hdf5'
+        checkpoint = keras.callbacks.ModelCheckpoint(
+            filepath, monitor='val_loss', save_best_only=True)
+        return checkpoint
+
+    @staticmethod
+    def buildModel(x, atten):
+        model = keras.Sequential()
+        model.add(keras.layers.Conv1D(64, kernel_size=3, input_shape=(x.shape[1],x.shape[2])))
+        model.add(keras.layers.Conv1D(64, kernel_size=3))
+        model.add(keras.layers.LSTM(64, return_sequences=True))
+        model.add(keras.layers.LSTM(64, return_sequences=True))
+        if atten:
+            model.add(attention(return_sequences=True))
+        model.add(keras.layers.Flatten())
+        model.add(keras.layers.Dense(512, activation='relu'))
+        model.add(keras.layers.Dense(128, activation='relu'))
+        model.add(keras.layers.Dense(64, activation='relu'))
+        model.add(keras.layers.Dense(32))
+        model.add(keras.layers.Dense(6))
+
+        return model
+
+    def fit(self, X, y):
+        checkpoint = self.checkpointer(self.atten)
+        self.history = self.model.fit(X, y, validation_split=0.1,
+                                      batch_size=32, epochs=10, callbacks=[checkpoint])
+        plt.plot(self.history.history['loss'], 'r', label='Training Loss')
+        plt.plot(self.history.history['val_loss'],
+                 'b', label='Validation Loss')
+        plt.legend()
+        plt.show()
+
+        return self.model
+
+    def predict(self,scaler,xtest,ytest):
+        if self.atten:
+            filepath = '../Weights/CNNLSTM/attention_cnnlstm.hdf5'
+        else:
+            filepath = '../Weights/CNNLSTM/simple_cnnlstm.hdf5'
+        print(self.model)
+        self.model.load_weights(filepath)
+        preds = self.model.predict(xtest)
+
+        ytest_unscaled = scaler.inverse_transform(ytest)
+        preds_unscaled = scaler.inverse_transform(preds)
+        
+        results = []
+        for i in range(ytest.shape[1]):
+            results.append(mse(ytest_unscaled[:,i],preds_unscaled[:,i]))
+        results = pd.DataFrame(results).reset_index()
+        path = '../Results/CNNLSTM/MSE_{self.atten}.xlsx'
+        results.to_excel(path)
+        return self
+
 
 
 # def build_lstm(x_train, atten=False, dropout=False, regularizer=None):

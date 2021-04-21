@@ -35,5 +35,6 @@ x_train,x_test,y_train,y_test,scaler = u.splitter(df[['Temp','Pavement']],['Pave
 print(f'The shape of x_train is {x_train.shape} and x_test is {x_test.shape}')
 print(f'The shape of y_train is {y_train.shape} and y_test is {y_test.shape}')
 
-model = m.buildLSTM(x_train,False)
+model = m.buildLSTM(x_train,True)
 model = model.fit(x_train,y_train)
+model.predict(scaler,x_test,y_test)
