@@ -46,9 +46,8 @@ class attention(keras.layers.Layer):
         return K.sum(output, axis=1)
 
 class buildLSTM(BaseEstimator, TransformerMixin):
-    def __init__(self, xtrain,ytrain,scaler, atten):
+    def __init__(self,xtrain, scaler,atten):
         self.xtrain = xtrain
-        self.ytrain = ytrain
         self.scaler = scaler
         self.atten = atten
         self.model = self.buildModel(self.xtrain,self.atten)
@@ -86,9 +85,9 @@ class buildLSTM(BaseEstimator, TransformerMixin):
 
         return model
 
-    def fit(self):
+    def fit(self,xtrain,ytrain):
         checkpoint = self.checkpointer(self.atten)
-        self.history = self.model.fit(self.xtrain, self.ytrain, validation_split=0.1,
+        self.history = self.model.fit(xtrain, ytrain, validation_split=0.1,
                                       batch_size=32, epochs=2, callbacks=[checkpoint])
         plt.plot(self.history.history['loss'], 'r', label='Training Loss')
         plt.plot(self.history.history['val_loss'],
@@ -98,7 +97,7 @@ class buildLSTM(BaseEstimator, TransformerMixin):
 
         return self
 
-    def predictions(self,xtest,ytest):
+    def transform(self,xtest,ytest):
         if self.atten:
             filepath = '../Weights/LSTM/attention_lstm.hdf5'
         else:
@@ -123,10 +122,10 @@ class buildLSTM(BaseEstimator, TransformerMixin):
         return self
     
 class buildCNNLSTM(BaseEstimator, TransformerMixin):
-    def __init__(self, xtrain,ytrain,scaler,atten):
+    def __init__(self, xtrain,ytrain,atten):
         self.xtrain = xtrain
         self.ytrain = ytrain
-        self.scaler = scaler
+        # self.scaler = scaler
         self.atten = atten
         self.model = self.buildModel(self.xtrain,self.atten)
         self.model.compile(loss='mse', optimizer=keras.optimizers.Adam(
@@ -172,7 +171,7 @@ class buildCNNLSTM(BaseEstimator, TransformerMixin):
 
         return self.model
 
-    def predictions(self,xtest,ytest):
+    def transform(self,xtest,ytest):
         if self.atten:
             filepath = '../Weights/CNNLSTM/attention_cnnlstm.hdf5'
         else:
