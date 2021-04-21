@@ -2,7 +2,6 @@ import os
 import pandas as pd
 import matplotlib.pylab as plt
 
-from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.metrics import mean_squared_error as mse
 
 from tensorflow import keras
@@ -44,7 +43,6 @@ class attention(keras.layers.Layer):
             return output
 
         return K.sum(output, axis=1)
-
 
 class buildLSTM():
     def __init__(self, xtrain, ytrain, scaler, atten):
@@ -123,7 +121,6 @@ class buildLSTM():
             results.to_excel(path)
         return self
 
-
 class buildCNNLSTM():
     def __init__(self, xtrain, ytrain, scaler, atten):
         self.xtrain = xtrain
@@ -175,7 +172,7 @@ class buildCNNLSTM():
 
         return self.model
 
-    def transform(self, xtest, ytest):
+    def predictions(self, xtest, ytest):
         if self.atten:
             filepath = '../Weights/CNNLSTM/attention_cnnlstm.hdf5'
         else:
@@ -199,7 +196,6 @@ class buildCNNLSTM():
             os.mkdir(os.path.split(path)[0])
             results.to_excel(path)
         return self
-
 
 class buildConvLSTM():
     def __init__(self, xtrain, ytrain, scaler, atten):
@@ -255,7 +251,7 @@ class buildConvLSTM():
 
         return self.model
 
-    def transform(self, xtest, ytest):
+    def predictions(self, xtest, ytest):
         if self.atten:
             filepath = '../Weights/ConvLSTM/attention_convlstm.hdf5'
         else:
@@ -279,3 +275,121 @@ class buildConvLSTM():
             os.mkdir(os.path.split(path)[0])
             results.to_excel(path)
         return self
+
+class buildSeq2Seq():
+    def __init__(self,xtrain,ytrain,scaler,atten):
+        self.xtrain = xtrain
+        self.ytrain = self.shapeSetter(ytrain)
+        self.scaler = scaler
+        self.atten  = atten
+        self.model  = self.buildModel(xtrain,ytrain,atten)
+        self.model.compile(loss='mse', optimizer=keras.optimizers.Adam(learning_rate=3e-4), metrics=['mae'])
+        
+    @staticmethod
+    def buildModel(xtrain,ytrain,atten):
+        if not atten:
+            input_train = keras.layers.Input(shape=(xtrain.shape[1], xtrain.shape[2]))
+            output_train = keras.layers.Input(shape=(ytrain.shape[1], ytrain.shape[2]))
+
+            ### --------------------------------Encoder Section -----------------------------------------------###
+            encoder_first = keras.layers.LSTM(128, return_sequences=True, return_state=False)(input_train)
+            encoder_second = keras.layers.LSTM(128, return_sequences=True)(encoder_first)
+            encoder_third = keras.layers.LSTM(128, return_sequences=True)(encoder_second)
+            encoder_fourth, encoder_fourth_s1, encoder_fourth_s2 = keras.layers.LSTM(128,return_sequences=False, return_state=True)(encoder_third)
+
+            ###---------------------------------Decorder Section-----------------------------------------------###
+            decoder_first = keras.layers.RepeatVector(output_train.shape[1])(encoder_fourth)
+            decoder_second = keras.layers.LSTM(128, return_state=False, return_sequences=True)(decoder_first,initial_state=[encoder_fourth,encoder_fourth_s2])
+            decoder_third = keras.layers.LSTM(128,return_sequences=True)(decoder_second)
+            decoder_fourth = keras.layers.LSTM(128,return_sequences=True)(decoder_third)
+            decoder_fifth = keras.layers.LSTM(128,return_sequences=True)(decoder_fourth)
+            print(decoder_fifth)
+
+            ###--------------------------------Output Section-------------------------------------------------###
+            output = keras.layers.TimeDistributed(keras.layers.Dense(output_train.shape[2]))(decoder_fifth)
+
+            model = keras.Model(inputs=input_train, outputs=output)
+            
+            return model
+        else:
+            input_train = keras.layers.Input(shape=(x_train.shape[1], x_train.shape[2]))
+            output_train = keras.layers.Input(shape=(y_train_seq.shape[1], y_train_seq.shape[2]))
+
+            ###----------------------------------------Encoder Section------------------------------------------###
+            encoder_first = keras.layers.LSTM(128, return_sequences=True, return_state=False)(input_train)
+            encoder_second = keras.layers.LSTM(128, return_sequences=True)(encoder_first)
+            encoder_third = keras.layers.LSTM(128, return_sequences=True)(encoder_second)
+            encoder_fourth, encoder_fourth_s1, encoder_fourth_s2 = keras.layers.LSTM(128,return_sequences=True,return_state=True)(encoder_third)
+
+            ###-----------------------------------------Decoder Section------------------------------------------###
+            decoder_first = keras.layers.RepeatVector(output_train.shape[1])(encoder_fourth_s1)
+            decoder_second = keras.layers.LSTM(128, return_state=False, return_sequences=True)(decoder_first, initial_state=[encoder_fourth_s1, encoder_fourth_s2])
+
+            attention = keras.layers.dot([decoder_second, encoder_fourth], axes=[2, 2])
+            attention = keras.layers.Activation('softmax')(attention)
+            context = keras.layers.dot([attention, encoder_fourth], axes=[2, 1])
+
+            decoder_third = keras.layers.concatenate([context, decoder_second])
+
+            decoder_fourth = keras.layers.LSTM(128, return_sequences=True)(decoder_third)
+            decoder_fifth = keras.layers.LSTM(128, return_sequences=True)(decoder_fourth)
+            decoder_sixth = keras.layers.LSTM(128, return_sequences=True)(decoder_fifth)
+
+            ###-----------------------------------------Output Section-----------------------------------------###
+            output = keras.layers.TimeDistributed(keras.layers.Dense(output_train.shape[2]))(decoder_sixth)
+
+            model = keras.Model(inputs=input_train, outputs=output)
+            return model
+        
+    @staticmethod
+    def shapeSetter(X):
+        return X.reshape(X.shape[0], X.shape[1], 1)
+    
+    @staticmethod
+    def checkpointer(atten):
+        if atten:
+            filepath = '../Weights/Seq2Seq/attention_seq2seq.hdf5'
+        else:
+            filepath = '../Weights/Seq2Seq/simple_seq2seq.hdf5'
+        checkpoint = keras.callbacks.ModelCheckpoint(
+            filepath, monitor='val_loss', save_best_only=True)
+        return checkpoint
+    
+    def fit(self):
+        checkpoint = self.checkpointer(self.atten)
+        self.history = self.model.fit(self.xtrain, self.ytrain, validation_split=0.1,
+                                      batch_size=32, epochs=2, callbacks=[checkpoint])
+        plt.plot(self.history.history['loss'], 'r', label='Training Loss')
+        plt.plot(self.history.history['val_loss'],
+                 'b', label='Validation Loss')
+        plt.legend()
+        plt.show()
+
+        return self.model
+    
+    def predictions(self, xtest, ytest):
+        if self.atten:
+            filepath = '../Weights/ConvLSTM/attention_convlstm.hdf5'
+        else:
+            filepath = '../Weights/ConvLSTM/simple_convlstm.hdf5'
+        print(self.model)
+        self.model.load_weights(filepath)
+        preds = self.model.predict(xtest)
+        preds = preds.reshape(preds.shape[0],preds.shape[1])
+        
+        ytest_unscaled = self.scaler.inverse_transform(ytest)
+        preds_unscaled = self.scaler.inverse_transform(preds)
+
+        results = []
+        for i in range(ytest.shape[1]):
+            results.append(mse(ytest_unscaled[:, i], preds_unscaled[:, i]))
+        results = pd.DataFrame(results).reset_index()
+        path = f'../Results/Seq2Seq/MSE_{self.atten}.xlsx'
+        try:
+            results.to_excel(path)
+        except Exception as e:
+            print(e)
+            os.mkdir(os.path.split(path)[0])
+            results.to_excel(path)
+        return self
+            
