@@ -393,3 +393,5 @@ class buildSeq2Seq():
             results.to_excel(path)
         return self
             
+class buildWavenet():
+    
