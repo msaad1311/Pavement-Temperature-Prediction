@@ -82,27 +82,10 @@ def model_fit(dest, directory, model, xtrain, ytrain, xtest, ytest, scaler, chec
 
 
 class buildLSTM(BaseEstimator, TransformerMixin):
-    def __init__(self, X, atten,checkpoint):
+    def __init__(self, X, atten):
         self.X = X
         self.atten = atten
-        self.checkpoint = checkpoint
-        self.model = keras.Sequential()
-        self.model.add(keras.layers.LSTM(64, return_sequences=True,
-                       input_shape=(self.X.shape[1], self.X.shape[2])))
-        self.model.add(keras.layers.LSTM(64, return_sequences=True))
-        self.model.add(keras.layers.Dropout(0.3))
-        self.model.add(keras.layers.LSTM(64, return_sequences=True))
-        self.model.add(keras.layers.LSTM(64, return_sequences=True))
-        if self.atten:
-            self.model.add(attention(return_sequences=True))
-        self.model.add(keras.layers.Flatten())
-        self.model.add(keras.layers.Dense(512, activation='relu'))
-        self.model.add(keras.layers.Dense(128, activation='relu'))
-        self.model.add(keras.layers.Dense(64, activation='relu'))
-        self.model.add(keras.layers.Dropout(0.3))
-        self.model.add(keras.layers.Dense(32))
-        self.model.add(keras.layers.Dense(6))
-
+        self.model = self.buildModel(self.X,self.atten)
         self.model.compile(loss='mse', optimizer=keras.optimizers.Adam(
             learning_rate=3e-4), metrics=['mae'])
 
@@ -112,86 +95,108 @@ class buildLSTM(BaseEstimator, TransformerMixin):
             filepath = 'attention_lstm.hdf5'
         else:
             filepath = 'simple_lstm.hdf5'
-        checkpoint = keras.callbacks.ModelCheckpoint(filepath,monitor='val_loss',save_best_only=True)
+        checkpoint = keras.callbacks.ModelCheckpoint(
+            filepath, monitor='val_loss', save_best_only=True)
         return checkpoint
+
+    @staticmethod
+    def buildModel(x, atten):
+        model = keras.Sequential()
+        model.add(keras.layers.LSTM(64, return_sequences=True,
+                  input_shape=(x.shape[1], x.shape[2])))
+        model.add(keras.layers.LSTM(64, return_sequences=True))
+        model.add(keras.layers.Dropout(0.3))
+        model.add(keras.layers.LSTM(64, return_sequences=True))
+        model.add(keras.layers.LSTM(64, return_sequences=True))
+        if atten:
+            model.add(attention(return_sequences=True))
+        model.add(keras.layers.Flatten())
+        model.add(keras.layers.Dense(512, activation='relu'))
+        model.add(keras.layers.Dense(128, activation='relu'))
+        model.add(keras.layers.Dense(64, activation='relu'))
+        model.add(keras.layers.Dropout(0.3))
+        model.add(keras.layers.Dense(32))
+        model.add(keras.layers.Dense(6))
+
+        return model
 
     def fit(self, X, y):
         checkpoint = self.checkpointer(self.atten)
-        self.history = self.model.fit(X,y,validation_split=0.1,
-                        batch_size=32, epochs=200, callbacks=[checkpoint])
+        self.history = self.model.fit(X, y, validation_split=0.1,
+                                      batch_size=32, epochs=10, callbacks=[checkpoint])
         plt.plot(self.history.history['loss'], 'r', label='Training Loss')
-        plt.plot(self.history.history['val_loss'], 'b', label='Validation Loss')
+        plt.plot(self.history.history['val_loss'],
+                 'b', label='Validation Loss')
         plt.legend()
         plt.show()
-        
+
         return self.model
-    
-    def predict(self,model,weights,scaler,xtest,ytest):
 
-        self.model.load_weights(weights)
-        preds = self.model.predict(xtest)
+#     def predict(self,model,weights,scaler,xtest,ytest):
 
-        ytest_unscaled = scaler.inverse_transform(ytest)
-        preds_unscaled = scaler.inverse_transform(preds)
-        
+#         self.model.load_weights(weights)
+#         preds = self.model.predict(xtest)
 
-
-def build_lstm(x_train, atten=False, dropout=False, regularizer=None):
-    K.clear_session()
-    model = keras.Sequential()
-    model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.LSTM(64, return_sequences=True,
-              kernel_regularizer=regularizer, input_shape=(x_train.shape[1], x_train.shape[2])))
-    model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.LSTM(
-        64, kernel_regularizer=regularizer, return_sequences=True))
-    if dropout:
-        model.add(keras.layers.Dropout(0.3))
-
-    model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.LSTM(
-        64, kernel_regularizer=regularizer, return_sequences=True))
-    model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.LSTM(
-        64, kernel_regularizer=regularizer, return_sequences=True))
-    if atten:
-        model.add(attention(return_sequences=True))
-    model.add(keras.layers.Flatten())
-    model.add(keras.layers.Dense(512, activation='relu'))
-    model.add(keras.layers.Dense(128, activation='relu'))
-    model.add(keras.layers.Dense(64, activation='relu'))
-    if dropout:
-        model.add(keras.layers.Dropout(0.3))
-
-    model.add(keras.layers.Dense(32))
-    model.add(keras.layers.Dense(6))
-
-    model.compile(loss='mse', optimizer=keras.optimizers.Adam(
-        learning_rate=0.001), metrics=['mae'])
-
-    return model
+#         ytest_unscaled = scaler.inverse_transform(ytest)
+#         preds_unscaled = scaler.inverse_transform(preds)
 
 
-def build_cnnlstm(x_train, atten=False, regularizer=None):
-    model = keras.Sequential()
-    model.add(keras.layers.add(BatchNormalization()))
-    model.add(keras.layers.Conv1D(64, kernel_size=3, kernel_regularizer=regularizer,
-              input_shape=(x_train.shape[1], x_train.shape[2])))
-    model.add(keras.layers.add(BatchNormalization()))
-    model.add(keras.layers.Conv1D(64, kernel_size=3))
-    model.add(keras.layers.add(BatchNormalization()))
-    model.add(keras.layers.LSTM(64, return_sequences=True))
-    model.add(keras.layers.add(BatchNormalization()))
-    model.add(keras.layers.LSTM(64, return_sequences=True))
-    if atten:
-        model.add(attention(return_sequences=True))
-    model.add(keras.layers.Flatten())
-    model.add(keras.layers.Dense(512, activation='relu'))
-    model.add(keras.layers.Dense(128, activation='relu'))
-    model.add(keras.layers.Dense(64, activation='relu'))
-    model.add(keras.layers.Dense(32))
-    model.add(keras.layers.Dense(6))
+# def build_lstm(x_train, atten=False, dropout=False, regularizer=None):
+#     K.clear_session()
+#     model = keras.Sequential()
+#     model.add(keras.layers.BatchNormalization())
+#     model.add(keras.layers.LSTM(64, return_sequences=True,
+#               kernel_regularizer=regularizer, input_shape=(x_train.shape[1], x_train.shape[2])))
+#     model.add(keras.layers.BatchNormalization())
+#     model.add(keras.layers.LSTM(
+#         64, kernel_regularizer=regularizer, return_sequences=True))
+#     if dropout:
+#         model.add(keras.layers.Dropout(0.3))
 
-    model.compile(loss='mse', optimizer=keras.optimizers.Adam(
-        learning_rate=0.0001), metrics=['mae'])
-    return model
+#     model.add(keras.layers.BatchNormalization())
+#     model.add(keras.layers.LSTM(
+#         64, kernel_regularizer=regularizer, return_sequences=True))
+#     model.add(keras.layers.BatchNormalization())
+#     model.add(keras.layers.LSTM(
+#         64, kernel_regularizer=regularizer, return_sequences=True))
+#     if atten:
+#         model.add(attention(return_sequences=True))
+#     model.add(keras.layers.Flatten())
+#     model.add(keras.layers.Dense(512, activation='relu'))
+#     model.add(keras.layers.Dense(128, activation='relu'))
+#     model.add(keras.layers.Dense(64, activation='relu'))
+#     if dropout:
+#         model.add(keras.layers.Dropout(0.3))
+
+#     model.add(keras.layers.Dense(32))
+#     model.add(keras.layers.Dense(6))
+
+#     model.compile(loss='mse', optimizer=keras.optimizers.Adam(
+#         learning_rate=0.001), metrics=['mae'])
+
+#     return model
+
+
+# def build_cnnlstm(x_train, atten=False, regularizer=None):
+#     model = keras.Sequential()
+#     model.add(keras.layers.add(BatchNormalization()))
+#     model.add(keras.layers.Conv1D(64, kernel_size=3, kernel_regularizer=regularizer,
+#               input_shape=(x_train.shape[1], x_train.shape[2])))
+#     model.add(keras.layers.add(BatchNormalization()))
+#     model.add(keras.layers.Conv1D(64, kernel_size=3))
+#     model.add(keras.layers.add(BatchNormalization()))
+#     model.add(keras.layers.LSTM(64, return_sequences=True))
+#     model.add(keras.layers.add(BatchNormalization()))
+#     model.add(keras.layers.LSTM(64, return_sequences=True))
+#     if atten:
+#         model.add(attention(return_sequences=True))
+#     model.add(keras.layers.Flatten())
+#     model.add(keras.layers.Dense(512, activation='relu'))
+#     model.add(keras.layers.Dense(128, activation='relu'))
+#     model.add(keras.layers.Dense(64, activation='relu'))
+#     model.add(keras.layers.Dense(32))
+#     model.add(keras.layers.Dense(6))
+
+#     model.compile(loss='mse', optimizer=keras.optimizers.Adam(
+#         learning_rate=0.0001), metrics=['mae'])
+#     return model
