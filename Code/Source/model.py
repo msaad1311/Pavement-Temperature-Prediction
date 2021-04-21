@@ -45,12 +45,14 @@ class attention(keras.layers.Layer):
 
         return K.sum(output, axis=1)
 
-class buildLSTM(BaseEstimator, TransformerMixin):
-    def __init__(self,xtrain, scaler,atten):
+
+class buildLSTM():
+    def __init__(self, xtrain, ytrain, scaler, atten):
         self.xtrain = xtrain
+        self.ytrain = ytrain
         self.scaler = scaler
         self.atten = atten
-        self.model = self.buildModel(self.xtrain,self.atten)
+        self.model = self.buildModel(self.xtrain, self.atten)
         self.model.compile(loss='mse', optimizer=keras.optimizers.Adam(
             learning_rate=3e-4), metrics=['mae'])
 
@@ -85,9 +87,9 @@ class buildLSTM(BaseEstimator, TransformerMixin):
 
         return model
 
-    def fit(self,xtrain,ytrain):
+    def fit(self):
         checkpoint = self.checkpointer(self.atten)
-        self.history = self.model.fit(xtrain, ytrain, validation_split=0.1,
+        self.history = self.model.fit(self.xtrain, self.ytrain, validation_split=0.1,
                                       batch_size=32, epochs=2, callbacks=[checkpoint])
         plt.plot(self.history.history['loss'], 'r', label='Training Loss')
         plt.plot(self.history.history['val_loss'],
@@ -97,7 +99,7 @@ class buildLSTM(BaseEstimator, TransformerMixin):
 
         return self
 
-    def transform(self,xtest,ytest):
+    def predictions(self, xtest, ytest):
         if self.atten:
             filepath = '../Weights/LSTM/attention_lstm.hdf5'
         else:
@@ -107,10 +109,10 @@ class buildLSTM(BaseEstimator, TransformerMixin):
 
         ytest_unscaled = self.scaler.inverse_transform(ytest)
         preds_unscaled = self.scaler.inverse_transform(preds)
-        
+
         results = []
         for i in range(ytest.shape[1]):
-            results.append(mse(ytest_unscaled[:,i],preds_unscaled[:,i]))
+            results.append(mse(ytest_unscaled[:, i], preds_unscaled[:, i]))
         results = pd.DataFrame(results).reset_index()
         path = f'../Results/LSTM/MSE_{self.atten}.xlsx'
         try:
@@ -120,14 +122,15 @@ class buildLSTM(BaseEstimator, TransformerMixin):
             os.mkdir(os.path.split(path)[0])
             results.to_excel(path)
         return self
-    
-class buildCNNLSTM(BaseEstimator, TransformerMixin):
-    def __init__(self, xtrain,ytrain,atten):
+
+
+class buildCNNLSTM():
+    def __init__(self, xtrain, ytrain, scaler, atten):
         self.xtrain = xtrain
         self.ytrain = ytrain
-        # self.scaler = scaler
+        self.scaler = scaler
         self.atten = atten
-        self.model = self.buildModel(self.xtrain,self.atten)
+        self.model = self.buildModel(self.xtrain, self.atten)
         self.model.compile(loss='mse', optimizer=keras.optimizers.Adam(
             learning_rate=3e-4), metrics=['mae'])
 
@@ -144,7 +147,8 @@ class buildCNNLSTM(BaseEstimator, TransformerMixin):
     @staticmethod
     def buildModel(x, atten):
         model = keras.Sequential()
-        model.add(keras.layers.Conv1D(64, kernel_size=3, input_shape=(x.shape[1],x.shape[2])))
+        model.add(keras.layers.Conv1D(64, kernel_size=3,
+                  input_shape=(x.shape[1], x.shape[2])))
         model.add(keras.layers.Conv1D(64, kernel_size=3))
         model.add(keras.layers.LSTM(64, return_sequences=True))
         model.add(keras.layers.LSTM(64, return_sequences=True))
@@ -171,7 +175,7 @@ class buildCNNLSTM(BaseEstimator, TransformerMixin):
 
         return self.model
 
-    def transform(self,xtest,ytest):
+    def transform(self, xtest, ytest):
         if self.atten:
             filepath = '../Weights/CNNLSTM/attention_cnnlstm.hdf5'
         else:
@@ -182,12 +186,92 @@ class buildCNNLSTM(BaseEstimator, TransformerMixin):
 
         ytest_unscaled = self.scaler.inverse_transform(ytest)
         preds_unscaled = self.scaler.inverse_transform(preds)
-        
+
         results = []
         for i in range(ytest.shape[1]):
-            results.append(mse(ytest_unscaled[:,i],preds_unscaled[:,i]))
+            results.append(mse(ytest_unscaled[:, i], preds_unscaled[:, i]))
         results = pd.DataFrame(results).reset_index()
         path = f'../Results/CNNLSTM/MSE_{self.atten}.xlsx'
+        try:
+            results.to_excel(path)
+        except Exception as e:
+            print(e)
+            os.mkdir(os.path.split(path)[0])
+            results.to_excel(path)
+        return self
+
+
+class buildConvLSTM():
+    def __init__(self, xtrain, ytrain, scaler, atten):
+        self.xtrain = self.shapeSetter(xtrain)
+        self.ytrain = ytrain
+        self.scaler = scaler
+        self.atten = atten
+        self.model = self.buildModel(self.xtrain, self.atten)
+        self.model.compile(loss='mse', optimizer=keras.optimizers.Adam(learning_rate=3e-4), metrics=['mae'])
+
+    @staticmethod
+    def shapeSetter(x):
+        return x.reshape(x.shape[0], 1, 1, x.shape[1], x.shape[2])
+
+    @staticmethod
+    def buildModel(x, atten):
+        model = keras.Sequential()
+        model.add(keras.layers.ConvLSTM2D(64, kernel_size=(1, 2), return_sequences=True,
+                                          input_shape=(x.shape[1], x.shape[2],
+                                                       x.shape[3], x.shape[4])))
+        model.add(keras.layers.ConvLSTM2D(64, kernel_size=(1, 2), return_sequences=True))
+        model.add(keras.layers.ConvLSTM2D(64, kernel_size=(1, 2), return_sequences=True))
+        model.add(keras.layers.ConvLSTM2D(64, kernel_size=(1, 2), return_sequences=True))
+        if atten:
+            model.add(attention(return_sequences=True))
+        model.add(keras.layers.Flatten())
+        model.add(keras.layers.Dense(512, activation='relu'))
+        model.add(keras.layers.Dense(128, activation='relu'))
+        model.add(keras.layers.Dense(64, activation='relu'))
+        model.add(keras.layers.Dense(32))
+        model.add(keras.layers.Dense(6))
+        
+        return model
+    @staticmethod
+    def checkpointer(atten):
+        if atten:
+            filepath = '../Weights/ConvLSTM/attention_convlstm.hdf5'
+        else:
+            filepath = '../Weights/ConvLSTM/simple_convlstm.hdf5'
+        checkpoint = keras.callbacks.ModelCheckpoint(
+            filepath, monitor='val_loss', save_best_only=True)
+        return checkpoint
+    
+    def fit(self):
+        checkpoint = self.checkpointer(self.atten)
+        self.history = self.model.fit(self.xtrain, self.ytrain, validation_split=0.1,
+                                      batch_size=32, epochs=2, callbacks=[checkpoint])
+        plt.plot(self.history.history['loss'], 'r', label='Training Loss')
+        plt.plot(self.history.history['val_loss'],
+                 'b', label='Validation Loss')
+        plt.legend()
+        plt.show()
+
+        return self.model
+
+    def transform(self, xtest, ytest):
+        if self.atten:
+            filepath = '../Weights/ConvLSTM/attention_convlstm.hdf5'
+        else:
+            filepath = '../Weights/ConvLSTM/simple_convlstm.hdf5'
+        print(self.model)
+        self.model.load_weights(filepath)
+        preds = self.model.predict(self.shapeSetter(xtest))
+
+        ytest_unscaled = self.scaler.inverse_transform(ytest)
+        preds_unscaled = self.scaler.inverse_transform(preds)
+
+        results = []
+        for i in range(ytest.shape[1]):
+            results.append(mse(ytest_unscaled[:, i], preds_unscaled[:, i]))
+        results = pd.DataFrame(results).reset_index()
+        path = f'../Results/CONVLSTM/MSE_{self.atten}.xlsx'
         try:
             results.to_excel(path)
         except Exception as e:
