@@ -47,11 +47,16 @@ for idx,model in enumerate(models):
     checkpoint_attention = keras.callbacks.ModelCheckpoint(filepath_attention, monitor='val_loss',save_best_only=True)
 
     wk=Workbook()
-    sheet1 = wk.add_sheet('Simple', cell_overwrite_ok=True)
-    sheet2 = wk.add_sheet('Attention', cell_overwrite_ok=True)
-    sheet3 = wk.add_sheet('Predictions', cell_overwrite_ok=True)
+    sheet1 = wk.add_sheet('Simple_BN', cell_overwrite_ok=True)
+    sheet2 = wk.add_sheet('Attention_BN', cell_overwrite_ok=True)
+    sheet3 = wk.add_sheet('Simple_L2', cell_overwrite_ok=True)
+    sheet4 = wk.add_sheet('Attention_L2', cell_overwrite_ok=True)
+    sheet5 = wk.add_sheet('Predictions', cell_overwrite_ok=True)
 
-    architecture = functs[idx](x_train,False,False)
+    #x_train,atten=False,dropout=False,regularizer=None
+    architecture = functs[idx](x_train,False,False,None)
+    m.model_fit(dest,model,architecture,x_train,y_train,x_test,y_test,scaler,checkpoint_simple,filepath_simple,sheet1)
+    architecture = functs[idx](x_train,True,False,None)
     m.model_fit(dest,model,architecture,x_train,y_train,x_test,y_test,scaler,checkpoint_simple,filepath_simple,sheet1)
     wk.save()
     break
