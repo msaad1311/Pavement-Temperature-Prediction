@@ -32,136 +32,21 @@ The results of each combination can be seen in the Results folder in `Dashboard.
 ## Structure
 The repoistory has the following directory tree.
 
-```
-Pavement-Temperature-Prediction
- ┣ Code
- ┃ ┣ Jupyter Notebook
- ┃ ┃ ┣ 01 - Exploratory Data Analysis.ipynb
- ┃ ┃ ┗ 02 - Forecasting.ipynb
- ┃ ┣ Python Scripts
- ┃ ┃ ┣ Combined_plot.py
- ┃ ┃ ┣ Ensembler.py
- ┃ ┃ ┣ main.py
- ┃ ┃ ┣ Models.py
- ┃ ┃ ┣ Train.py
- ┃ ┃ ┗ Utils.py
- ┣ Data
- ┃ ┣ Pave_data_1.xlsx
- ┃ ┗ Pave_data_cleaned.xlsx
- ┣ Results
- ┃ ┣ Six Hours Lag
- ┃ ┃ ┣ CNN-LSTM
- ┃ ┃ ┣ ConvLSTM
- ┃ ┃ ┣ LSTM
- ┃ ┃ ┣ Seq2Seq
- ┃ ┃ ┗ Wavenet
- ┃ ┣ Twenty Four Hours Lag
- ┃ ┃ ┣ CNN-LSTM
- ┃ ┃ ┣ ConvLSTM
- ┃ ┃ ┣ LSTM
- ┃ ┃ ┣ Seq2Seq
- ┃ ┃ ┗ Wavenet
- ┃ ┗ Dashboard.xlsx
-```
-
 
 ```
 Pavement-Temperature-Prediction
-├─ .vscode
-│  └─ settings.json
 ├─ Code
-│  ├─ .ipynb_checkpoints
-│  │  ├─ 01 - Exploratory Data Analysis-checkpoint.ipynb
-│  │  ├─ 02 - Forecasting-checkpoint.ipynb
-│  │  └─ Main-checkpoint.ipynb
 │  ├─ Jupyter Notebook
-│  │  ├─ 01 - Exploratory Data Analysis.ipynb
-│  │  └─ 02 - Forecasting.ipynb
 │  ├─ Results
 │  ├─ Source
-│  │  ├─ .vscode
-│  │  │  └─ settings.json
-│  │  ├─ forecasting.ipynb
-│  │  ├─ main.py
-│  │  ├─ model.py
-│  │  ├─ utils.py
-│  │  └─ __pycache__
-│  │     ├─ model.cpython-38.pyc
-│  │     └─ utils.cpython-38.pyc
 │  ├─ Testing
-│  │  ├─ Combined_plots.ipynb
-│  │  ├─ Main.ipynb
-│  │  └─ Python Scripts
-│  │     ├─ Combined_plot.py
-│  │     ├─ Ensembler.py
-│  │     ├─ main.py
-│  │     ├─ Models.py
-│  │     ├─ Train.py
-│  │     └─ Utils.py
 │  ├─ Weights
-│  └─ __pycache__
-│     ├─ Ensembler.cpython-37.pyc
-│     ├─ Models.cpython-37.pyc
-│     ├─ Train.cpython-37.pyc
-│     └─ Utils.cpython-37.pyc
 ├─ Data
 │  ├─ Pave_data_1.xlsx
 │  └─ Pave_data_cleaned.xlsx
-├─ Images
-│  └─ Dashboard.PNG
-├─ README.md
-├─ requirements.txt
 └─ Results
    ├─ Dashboard.xlsx
    ├─ Six Hours Lag
-   │  ├─ CNN-LSTM
-   │  │  ├─ attention_cnnlstm.hdf5
-   │  │  ├─ CNN-LStM Results.xls
-   │  │  └─ simple_cnnlstm.hdf5
-   │  ├─ ConvLSTM
-   │  │  ├─ attention_convlstm.hdf5
-   │  │  ├─ ConvLSTM Results.xls
-   │  │  └─ simple_convlstm.hdf5
-   │  ├─ LSTM
-   │  │  ├─ attention_lstm.hdf5
-   │  │  ├─ LSTM Result.xls
-   │  │  ├─ simple_lstm.hdf5
-   │  │  └─ simple_lstm_l2.hdf5
-   │  ├─ LSTM1
-   │  │  ├─ attention_lstm_bn.hdf5
-   │  │  ├─ attention_lstm_l2.hdf5
-   │  │  ├─ result.xls
-   │  │  ├─ result.xlsx
-   │  │  └─ simple_lstm.hdf5
-   │  ├─ Seq2Seq
-   │  │  ├─ attention_seq2seq.hdf5
-   │  │  ├─ Seq2Seq Results.xls
-   │  │  └─ simple_seq2seq.hdf5
-   │  └─ Wavenet
-   │     ├─ attention_wavenet.hdf5
-   │     ├─ simple_wavenet.hdf5
-   │     └─ Wavenet Results.xls
    └─ Twenty Four Hours Lag
-      ├─ CNN-LSTM
-      │  ├─ attention_cnnlstm.hdf5
-      │  ├─ CNN-LStM Results.xls
-      │  └─ simple_cnnlstm.hdf5
-      ├─ ConvLSTM
-      │  ├─ attention_convlstm.hdf5
-      │  ├─ ConvLSTM Results.xls
-      │  └─ simple_convlstm.hdf5
-      ├─ LSTM
-      │  ├─ attention_lstm.hdf5
-      │  ├─ LSTM Result.xls
-      │  └─ simple_lstm.hdf5
-      ├─ Seq2Seq
-      │  ├─ attention_seq2seq.hdf5
-      │  ├─ Seq2Seq Results.xls
-      │  ├─ simple_seq2seq.hdf5
-      │  └─ simple_seq2seq1.hdf5
-      └─ Wavenet
-         ├─ attention_wavenet.hdf5
-         ├─ simple_wavenet.hdf5
-         └─ Wavenet Results.xls
 
 ```
