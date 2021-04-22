@@ -267,7 +267,7 @@ class buildConvLSTM():
         for i in range(ytest.shape[1]):
             results.append(mse(ytest_unscaled[:, i], preds_unscaled[:, i]))
         results = pd.DataFrame(results).reset_index()
-        path = f'../Results/CONVLSTM/MSE_{self.atten}.xlsx'
+        path = f'../Results/ConvLSTM/MSE_{self.atten}.xlsx'
         try:
             results.to_excel(path)
         except Exception as e:
@@ -394,4 +394,98 @@ class buildSeq2Seq():
         return self
             
 class buildWavenet():
+    def __init__(self,xtrain,ytrain,scaler,atten,n_filters=128,filter_width=2) -> None:
+        self.n_filters = n_filters
+        self.filter_width = filter_width
+        self.dilation_rates = [2**i for i in range(7)]
+        self.atten = atten
+        self.xtrain = xtrain
+        self.ytrain = ytrain
+        self.scaler = scaler
+        self.model = self.buildModel(self.n_filters,self.filter_width,self.dilation_rates,self.xtrain)
+        self.model.compile(loss='mse', optimizer=keras.optimizers.Adam(learning_rate=3e-4), metrics=['mae'])
     
+    @staticmethod
+    def buildModel(n_filters,filter_width,dilation_rates,xtrain,atten):
+        inputs = keras.layers.Input(shape=(xtrain.shape[1],xtrain.shape[2]))
+        x=inputs
+
+        skips = []
+        for dilation_rate in dilation_rates:
+
+            x   = keras.layers.Conv1D(64, 1, padding='same')(x) 
+            x_f = keras.layers.Conv1D(filters=n_filters,kernel_size=filter_width,padding='causal',dilation_rate=dilation_rate)(x)
+            x_g = keras.layers.Conv1D(filters=n_filters,kernel_size=filter_width, padding='causal',dilation_rate=dilation_rate)(x)
+
+            z = keras.layers.Multiply()([keras.layers.Activation('tanh')(x_f),keras.layers.Activation('sigmoid')(x_g)])
+
+            z = keras.layers.Conv1D(64, 1, padding='same', activation='relu')(z)
+
+            x = keras.layers.Add()([x, z])    
+
+            skips.append(z)
+
+        out = keras.layers.Activation('relu')(keras.layers.Add()(skips)) 
+        if atten:
+            out = attention(return_sequences=True)(out)
+        out = keras.layers.Conv1D(128, 1, padding='same')(out)
+        out = keras.layers.Activation('relu')(out)
+        out = keras.layers.Dropout(0.4)(out)
+        out = keras.layers.Conv1D(1, 1, padding='same')(out)
+
+        out = keras.layers.Flatten()(out)
+        out = keras.layers.Dense(6)(out)
+
+        model = keras.Model(inputs, out)
+        return model
+    
+    @staticmethod
+    def checkpointer(atten):
+        if atten:
+            filepath = '../Weights/WaveNet/attention_wavenet.hdf5'
+        else:
+            filepath = '../Weights/WaveNet/simple_wavenet.hdf5'
+        checkpoint = keras.callbacks.ModelCheckpoint(
+            filepath, monitor='val_loss', save_best_only=True)
+        return checkpoint
+    
+    def fit(self):
+        checkpoint = self.checkpointer(self.atten)
+        self.history = self.model.fit(self.xtrain, self.ytrain, validation_split=0.1,
+                                      batch_size=32, epochs=2, callbacks=[checkpoint])
+        plt.plot(self.history.history['loss'], 'r', label='Training Loss')
+        plt.plot(self.history.history['val_loss'],
+                 'b', label='Validation Loss')
+        plt.legend()
+        plt.show()
+
+        return self.model
+    
+    def predictions(self, xtest, ytest):
+        if self.atten:
+            filepath = '../Weights/WaveNet/attention_wavenet.hdf5'
+        else:
+            filepath = '../Weights/WaveNet/simple_wavenet.hdf5'
+            
+        self.model.load_weights(filepath)
+        preds = self.model.predict(xtest)
+        preds = preds.reshape(preds.shape[0],preds.shape[1])
+        
+        ytest_unscaled = self.scaler.inverse_transform(ytest)
+        preds_unscaled = self.scaler.inverse_transform(preds)
+
+        results = []
+        for i in range(ytest.shape[1]):
+            results.append(mse(ytest_unscaled[:, i], preds_unscaled[:, i]))
+        results = pd.DataFrame(results).reset_index()
+        path = f'../Results/Wavenet/MSE_{self.atten}.xlsx'
+        try:
+            results.to_excel(path)
+        except Exception as e:
+            print(e)
+            os.mkdir(os.path.split(path)[0])
+            results.to_excel(path)
+        return self
+    
+
+        
