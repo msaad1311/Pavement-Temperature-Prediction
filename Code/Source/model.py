@@ -282,7 +282,7 @@ class buildSeq2Seq():
         self.ytrain = self.shapeSetter(ytrain)
         self.scaler = scaler
         self.atten  = atten
-        self.model  = self.buildModel(xtrain,ytrain,atten)
+        self.model  = self.buildModel(self.xtrain,self.ytrain,self.atten)
         self.model.compile(loss='mse', optimizer=keras.optimizers.Adam(learning_rate=3e-4), metrics=['mae'])
         
     @staticmethod
@@ -312,8 +312,8 @@ class buildSeq2Seq():
             
             return model
         else:
-            input_train = keras.layers.Input(shape=(x_train.shape[1], x_train.shape[2]))
-            output_train = keras.layers.Input(shape=(y_train_seq.shape[1], y_train_seq.shape[2]))
+            input_train = keras.layers.Input(shape=(xtrain.shape[1], xtrain.shape[2]))
+            output_train = keras.layers.Input(shape=(ytrain.shape[1], ytrain.shape[2]))
 
             ###----------------------------------------Encoder Section------------------------------------------###
             encoder_first = keras.layers.LSTM(128, return_sequences=True, return_state=False)(input_train)
@@ -369,9 +369,9 @@ class buildSeq2Seq():
     
     def predictions(self, xtest, ytest):
         if self.atten:
-            filepath = '../Weights/ConvLSTM/attention_convlstm.hdf5'
+            filepath = '../Weights/Seq2Seq/attention_seq2seq.hdf5'
         else:
-            filepath = '../Weights/ConvLSTM/simple_convlstm.hdf5'
+            filepath = '../Weights/Seq2Seq/simple_seq2seq.hdf5'
         print(self.model)
         self.model.load_weights(filepath)
         preds = self.model.predict(xtest)
@@ -402,7 +402,7 @@ class buildWavenet():
         self.xtrain = xtrain
         self.ytrain = ytrain
         self.scaler = scaler
-        self.model = self.buildModel(self.n_filters,self.filter_width,self.dilation_rates,self.xtrain)
+        self.model = self.buildModel(self.n_filters,self.filter_width,self.dilation_rates,self.xtrain,self.atten)
         self.model.compile(loss='mse', optimizer=keras.optimizers.Adam(learning_rate=3e-4), metrics=['mae'])
     
     @staticmethod
