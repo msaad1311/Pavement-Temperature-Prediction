@@ -1,7 +1,6 @@
 import utils as u
 import model as m
 
-from sklearn.pipeline import Pipeline
 
 # Specifying the source path
 src = r'D:\Pavement-Temperature-Prediction\Data\Pave_data_cleaned.xlsx'
@@ -15,11 +14,10 @@ x_train, x_test, y_train, y_test, scaler = u.splitter(
 print(f'The shape of x_train is {x_train.shape} and x_test is {x_test.shape}')
 print(f'The shape of y_train is {y_train.shape} and y_test is {y_test.shape}')
 
-pipe = Pipeline([
-    ('LSTM_simple', m.buildLSTM(x_train,scaler,False)),
-    ('LSTM_attent', m.buildLSTM(x_train,scaler,True)),
-    # ('CNNL_simple', m.buildCNNLSTM()),
-    # ('CNNL_attent', m.buildCNNLSTM())
-], verbose=True)
+functs = [m.buildLSTM,m.buildCNNLSTM,m.buildConvLSTM,m.buildSeq2Seq,m.buildWavenet]
 
-pipe.fit(x_train, y_train)
+for f in functs:
+    for attention in [True,False]:
+        mode = f(x_train,y_train,scaler,atten=attention)
+        mode.fit()
+        mode.predictions(x_test,y_test)
